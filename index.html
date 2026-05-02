@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+    <meta charset="UTF-8">
+    <title>Loma Control Center</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f0f0f; color: white; text-align: center; padding: 50px; }
+        .circle { width: 150px; height: 150px; border-radius: 50%; background: #00d2ff; margin: 0 auto; box-shadow: 0 0 20px #00d2ff; cursor: pointer; transition: 0.3s; }
+        .circle:active { transform: scale(0.9); }
+        h1 { margin-top: 30px; font-size: 24px; }
+        #log { font-size: 14px; color: #888; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="circle" onclick="connectBluetooth()"></div>
+    <h1>لوما پینٹنگ کنٹرول</h1>
+    <div id="status">اسٹیٹس: ڈس کنیکٹڈ</div>
+    <div id="log">بلوٹوتھ سے جڑنے کے لیے نیلے دائرے پر کلک کریں</div>
+
+    <script>
+        let bluetoothDevice;
+        let characteristic;
+
+        async function connectBluetooth() {
+            try {
+                // ESP32 کو ڈھونڈنا
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: ['4fafc201-1fb5-459e-8fcc-c5c9c331914b'] // ESP32 Service UUID
+                });
+
+                const server = await bluetoothDevice.gatt.connect();
+                const service = await server.getPrimaryService('4fafc201-1fb5-459e-8fcc-c5c9c331914b');
+                characteristic = await service.getCharacteristic('beb5483e-36e1-4688-b7f5-ea07361b26a8');
+
+                // ڈیٹا موصول کرنے کا فنکشن
+                await characteristic.startNotifications();
+                characteristic.addEventListener('characteristicvaluechanged', handleData);
+
+                document.getElementById('status').innerText = "اسٹیٹس: جڑا ہوا ہے (" + bluetoothDevice.name + ")";
+                document.getElementById('log').innerText = "اب پینٹنگ سے آواز دیں، موبائل خود بخود جیمنائی کھولے گا";
+
+            } catch (error) {
+                console.log(error);
+                alert("بلوٹوتھ کنکشن میں مسئلہ ہے!");
+            }
+        }
+
+        function handleData(event) {
+            let value = new TextDecoder().decode(event.target.value);
+            if (value === "OPEN_GEMINI") {
+                // گوگل اسسٹنٹ یا جیمنائی کھولنے کا لنک
+                window.location.href = "googleassistant://"; 
+                // اگر آپ مخصوص یو آر ایل کھولنا چاہیں تو یہاں لکھ سکتے ہیں
+            }
+        }
+    </script>
+</body>
+</html>
