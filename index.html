@@ -1,45 +1,49 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Loma Pro</title>
+    <title>Loma AI Voice</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="mobile-web-app-capable" content="yes">
     <style>
-        body { background: #000; color: #0f0; font-family: monospace; text-align: center; }
-        .box { border: 2px solid #0f0; padding: 20px; margin: 20px; border-radius: 10px; }
-        button { background: #0f0; color: #000; border: none; padding: 15px; font-weight: bold; width: 100%; cursor: pointer; }
+        body { background: #121212; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
+        .card { background: #1e1e1e; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .btn-connect { background: #007bff; color: white; border: none; padding: 20px; width: 100%; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        #log { margin-top: 20px; color: #00ff00; font-family: monospace; font-size: 14px; text-align: left; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h3>Loma Universal Terminal</h3>
-        <button onclick="scan()">بلوٹوتھ تلاش کریں</button>
-        <p id="stat">اسٹیٹس: ڈس کنیکٹڈ</p>
+    <div class="card">
+        <h2>Loma Control Panel</h2>
+        <p id="status" style="color: #ff9800;">Status: Ready to Connect</p>
+        <button class="btn-connect" onclick="startSystem()">Connect to Loma</button>
+        <div id="log"></div>
     </div>
-    <div id="log" style="text-align: left; padding: 10px; font-size: 12px;"></div>
 
     <script>
-        async function scan() {
+        async function startSystem() {
             try {
-                // یہ لائن ہر بلوٹوتھ ڈیوائس کو دکھائے گی
                 const device = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
                     optionalServices: ['4fafc201-1fb5-459e-8fcc-c5c9c331914b']
                 });
                 
-                document.getElementById('stat').innerText = "کنکٹ ہو رہا ہے: " + device.name;
                 const server = await device.gatt.connect();
+                document.getElementById('status').innerText = "Connected: " + device.name;
+                document.getElementById('status').style.color = "#4caf50";
+
                 const service = await server.getPrimaryService('4fafc201-1fb5-459e-8fcc-c5c9c331914b');
                 const char = await service.getCharacteristic('beb5483e-36e1-4688-b7f5-ea07361b26a8');
                 
                 await char.startNotifications();
                 char.addEventListener('characteristicvaluechanged', (e) => {
                     let val = new TextDecoder().decode(e.target.value).trim();
-                    document.getElementById('log').innerHTML += "> سگنل ملا: " + val + "<br>";
+                    document.getElementById('log').innerHTML += "> Recieved: " + val + "<br>";
+                    
                     if(val === "OPEN_GEMINI") {
-                         window.location.href = "intent://com.google.android.googlequicksearchbox/#Intent;scheme=googleapp;action=android.intent.action.VOICE_ASSISTANT;end";
+                        // یہ کمانڈ ایپ کے اندر سے گوگل اسسٹنٹ کو کھولے گی
+                        window.location.href = "googleassistant://";
                     }
                 });
-                document.getElementById('stat').innerText = "کنیکٹڈ ✅";
             } catch (e) {
                 alert("Error: " + e);
             }
