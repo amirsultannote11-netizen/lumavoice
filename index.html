@@ -5,63 +5,55 @@
     <title>Loma Control Center</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { font-family: sans-serif; background: #0f0f0f; color: white; text-align: center; padding: 50px; }
-        .circle { width: 150px; height: 150px; border-radius: 50%; background: #00d2ff; margin: 0 auto; box-shadow: 0 0 30px #00d2ff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-        #status { margin-top: 20px; color: #00ff00; }
-        #log { font-size: 12px; color: #888; margin-top: 10px; }
+        body { font-family: sans-serif; background: #0f0f0f; color: white; text-align: center; padding: 30px; }
+        .circle { width: 120px; height: 120px; border-radius: 50%; background: #00d2ff; margin: 20px auto; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 0 20px #00d2ff; }
+        .test-btn { background: #ff4757; color: white; border: none; padding: 15px 30px; border-radius: 10px; cursor: pointer; font-size: 16px; margin-top: 20px; }
+        #status { color: #00ff00; margin-top: 15px; }
+        #log { font-size: 14px; color: #888; background: #222; padding: 10px; border-radius: 5px; margin-top: 20px; min-height: 50px; }
     </style>
 </head>
 <body>
 
-    <div class="circle" onclick="connectBluetooth()">لوما کنکٹ کریں</div>
+    <h2>لوما کنٹرول سسٹم</h2>
+    
+    <div class="circle" onclick="connectBluetooth()">کنکٹ کریں</div>
+    
+    <button class="test-btn" onclick="openAssistant()">1. ٹیسٹ اسسٹنٹ (پہلے یہ دبائیں)</button>
+
     <div id="status">اسٹیٹس: ڈس کنیکٹڈ</div>
-    <div id="log">انتظار فرمائیں...</div>
+    <div id="log">ڈیٹا کا انتظار ہے...</div>
 
     <script>
-        let bluetoothDevice;
         let characteristic;
 
         async function connectBluetooth() {
             try {
-                document.getElementById('log').innerText = "ڈیوائس تلاش کی جا رہی ہے...";
-                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                const device = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
                     optionalServices: ['4fafc201-1fb5-459e-8fcc-c5c9c331914b']
                 });
-
-                const server = await bluetoothDevice.gatt.connect();
+                const server = await device.gatt.connect();
                 const service = await server.getPrimaryService('4fafc201-1fb5-459e-8fcc-c5c9c331914b');
                 characteristic = await service.getCharacteristic('beb5483e-36e1-4688-b7f5-ea07361b26a8');
-
+                
                 await characteristic.startNotifications();
-                characteristic.addEventListener('characteristicvaluechanged', handleData);
+                characteristic.addEventListener('characteristicvaluechanged', (e) => {
+                    let value = new TextDecoder().decode(e.target.value).trim();
+                    document.getElementById('log').innerText = "ESP32 کا پیغام: " + value;
+                    if (value === "OPEN_GEMINI") {
+                        openAssistant();
+                    }
+                });
 
-                document.getElementById('status').innerText = "اسٹیٹس: جڑا ہوا ہے (" + bluetoothDevice.name + ")";
-                document.getElementById('log').innerText = "کمانڈ وصول کرنے کے لیے تیار!";
-
-            } catch (error) {
-                document.getElementById('log').innerText = "خرابی: " + error;
+                document.getElementById('status').innerText = "اسٹیٹس: جڑا ہوا ہے!";
+            } catch (err) {
+                document.getElementById('log').innerText = "خرابی: " + err;
             }
         }
 
-        function handleData(event) {
-            let value = new TextDecoder().decode(event.target.value).trim();
-            document.getElementById('log').innerText = "موصولہ ڈیٹا: " + value;
-
-            if (value === "OPEN_GEMINI") {
-                // طریقہ 1: گوگل اسسٹنٹ ڈائریکٹ لنک
-                window.location.href = "googleassistant://";
-                
-                // طریقہ 2: اگر 1 کام نہ کرے تو 1 سیکنڈ بعد یہ کوشش کرے (گوگل وائس سرچ)
-                setTimeout(() => {
-                    window.location.href = "googleapp://utils/voice-search";
-                }, 1000);
-
-                // طریقہ 3: اینڈرائیڈ انٹنٹ (بہت طاقتور طریقہ)
-                setTimeout(() => {
-                    window.location.href = "intent://#Intent;scheme=googleapp;package=com.google.android.googlequicksearchbox;action=android.intent.action.VOICE_ASSISTANT;end";
-                }, 2000);
-            }
+        function openAssistant() {
+            // یہ اینڈرائیڈ کا سب سے مضبوط لنک ہے جو گوگل اسسٹنٹ کھولتا ہے
+            window.location.href = "intent://com.google.android.googlequicksearchbox/#Intent;scheme=googleapp;action=android.intent.action.VOICE_ASSISTANT;end";
         }
     </script>
 </body>
