@@ -1,80 +1,48 @@
 <!DOCTYPE html>
-<html lang="ur">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Loma Control System</title>
+    <title>Loma Pro</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
-        .status-card { background: #1e1e1e; padding: 20px; border-radius: 15px; border: 1px solid #333; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .btn { background: #00d2ff; color: #000; border: none; padding: 15px 30px; border-radius: 10px; font-weight: bold; cursor: pointer; margin: 10px; font-size: 16px; transition: 0.3s; }
-        .btn:hover { background: #00b4db; transform: scale(1.05); }
-        .btn-test { background: #ff4757; color: white; }
-        #log-container { background: #000; border: 2px solid #333; border-radius: 10px; padding: 15px; margin-top: 20px; }
-        #log { color: #00ff00; font-family: monospace; text-align: left; height: 200px; overflow-y: auto; font-size: 13px; line-height: 1.5; }
-        .log-entry { border-bottom: 1px solid #222; padding: 5px 0; }
+        body { background: #000; color: #0f0; font-family: monospace; text-align: center; }
+        .box { border: 2px solid #0f0; padding: 20px; margin: 20px; border-radius: 10px; }
+        button { background: #0f0; color: #000; border: none; padding: 15px; font-weight: bold; width: 100%; cursor: pointer; }
     </style>
 </head>
 <body>
-
-    <h2>Loma Voice Assistant 🤖</h2>
-    
-    <div class="status-card">
-        <div id="status" style="margin-bottom: 15px; color: #ffbc00;">اسٹیٹس: ڈس کنیکٹڈ</div>
-        <button class="btn" onclick="connectBT()">لوما کو کنکٹ کریں</button>
-        <button class="btn btn-test" onclick="openAssistant()">ٹیسٹ جیمنائی</button>
+    <div class="box">
+        <h3>Loma Universal Terminal</h3>
+        <button onclick="scan()">بلوٹوتھ تلاش کریں</button>
+        <p id="stat">اسٹیٹس: ڈس کنیکٹڈ</p>
     </div>
-
-    <div id="log-container">
-        <div style="color: #888; margin-bottom: 10px; font-size: 12px; text-transform: uppercase;">سسٹم لائیو لاگ</div>
-        <div id="log">بلوٹوتھ کنکشن کا انتظار ہے...</div>
-    </div>
+    <div id="log" style="text-align: left; padding: 10px; font-size: 12px;"></div>
 
     <script>
-        let characteristic;
-
-        function addLog(msg) {
-            const logDiv = document.getElementById('log');
-            const time = new Date().toLocaleTimeString();
-            logDiv.innerHTML += `<div class="log-entry"><span style="color: #555;">[${time}]</span> ${msg}</div>`;
-            logDiv.scrollTop = logDiv.scrollHeight;
-        }
-
-        async function connectBT() {
+        async function scan() {
             try {
-                addLog("بلوٹوتھ سرچنگ شروع...");
+                // یہ لائن ہر بلوٹوتھ ڈیوائس کو دکھائے گی
                 const device = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
                     optionalServices: ['4fafc201-1fb5-459e-8fcc-c5c9c331914b']
                 });
                 
-                addLog("جڑ رہا ہے: " + device.name);
+                document.getElementById('stat').innerText = "کنکٹ ہو رہا ہے: " + device.name;
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService('4fafc201-1fb5-459e-8fcc-c5c9c331914b');
-                characteristic = await service.getCharacteristic('beb5483e-36e1-4688-b7f5-ea07361b26a8');
+                const char = await service.getCharacteristic('beb5483e-36e1-4688-b7f5-ea07361b26a8');
                 
-                await characteristic.startNotifications();
-                characteristic.addEventListener('characteristicvaluechanged', (e) => {
-                    let value = new TextDecoder().decode(e.target.value).trim();
-                    addLog("ESP32 کا پیغام ملا: <b style='color:white;'>" + value + "</b>");
-                    
-                    if (value === "OPEN_GEMINI") {
-                        addLog("کمانڈ میچ ہو گئی! جیمنائی کھول رہا ہوں...");
-                        openAssistant();
+                await char.startNotifications();
+                char.addEventListener('characteristicvaluechanged', (e) => {
+                    let val = new TextDecoder().decode(e.target.value).trim();
+                    document.getElementById('log').innerHTML += "> سگنل ملا: " + val + "<br>";
+                    if(val === "OPEN_GEMINI") {
+                         window.location.href = "intent://com.google.android.googlequicksearchbox/#Intent;scheme=googleapp;action=android.intent.action.VOICE_ASSISTANT;end";
                     }
                 });
-
-                document.getElementById('status').innerText = "اسٹیٹس: کنیکٹڈ ✅";
-                document.getElementById('status').style.color = "#00ff00";
-                addLog("لوما مکمل تیار ہے! اب مائیک یا سیریل مانیٹر استعمال کریں۔");
-            } catch (err) {
-                addLog("خرابی: " + err);
+                document.getElementById('stat').innerText = "کنیکٹڈ ✅";
+            } catch (e) {
+                alert("Error: " + e);
             }
-        }
-
-        function openAssistant() {
-            // جیمنائی کھولنے کا بہترین طریقہ
-            window.location.href = "intent://com.google.android.googlequicksearchbox/#Intent;scheme=googleapp;action=android.intent.action.VOICE_ASSISTANT;end";
         }
     </script>
 </body>
